@@ -1,0 +1,25 @@
+name: Deploy and Purge Cache
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build and Deploy
+      run: |
+        echo "Deploy your application here (e.g., upload files to server or S3)"
+
+    - name: Purge Cloudflare Cache
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+curl -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+     -H "Authorization: Bearer u5OtLSVLc3FdJ_2i6NEKOfw-ovyfApB7Fby2uPJ9" \
+     -H "Content-Type:application/json"
