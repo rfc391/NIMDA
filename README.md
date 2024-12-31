@@ -1,92 +1,78 @@
 
-# NINDA (National Intelligence Network Data Analyzer)
+# NINDA - National Intelligence Network Data Analyzer
 
-## Executive Overview
+## Overview
+NINDA is an enterprise-grade intelligence management platform designed for law enforcement agencies, security organizations, and intelligence departments. It provides a comprehensive suite of tools aligned with the National Intelligence Model framework for streamlined intelligence operations.
 
-NINDA is an enterprise-grade intelligence management system engineered for law enforcement agencies, security organizations, and intelligence departments. Built on modern web technologies, NINDA streamlines intelligence operations by providing a comprehensive suite of tools aligned with the National Intelligence Model framework.
+## Features
+- Real-time intelligence collection and analysis
+- Secure multi-user collaboration
+- Advanced data management and encryption
+- Resource allocation optimization
+- Performance metrics and analytics
+- Threat assessment tools
+- Information dissemination controls
 
-## Core Capabilities
+## Technology Stack
 
-- Intelligence Collection & Analysis
-- Real-time Collaboration
-- Secure Data Management
-- Resource Optimization
-- Performance Analytics
-- Threat Assessment
-- Information Dissemination
+### Frontend
+- React + TypeScript
+- TanStack Query
+- Radix UI Components
+- Tailwind CSS
+- WebSocket Integration
 
-## Technical Architecture
+### Backend
+- Express.js + TypeScript
+- PostgreSQL + Drizzle ORM
+- Real-time WebSocket Server
+- Session Authentication
 
-### Frontend Technologies
-- React with TypeScript for robust application architecture
-- TanStack Query for efficient data management
-- Radix UI components for enterprise-grade interface
-- Tailwind CSS for consistent styling
-- WebSocket integration for real-time updates
+## Prerequisites
+- Node.js
+- PostgreSQL Database
+- Modern Web Browser (Chrome, Firefox, Safari, Edge)
 
-### Backend Infrastructure
-- Express.js server with TypeScript
-- PostgreSQL database with Drizzle ORM
-- Real-time WebSocket communication
-- Session-based authentication
+## Quick Start
 
-## System Requirements
-
-- Node.js runtime environment
-- PostgreSQL database instance
-- Modern web browser (Chrome, Firefox, Safari, Edge)
-
-## Deployment Architecture
-
-```
-├── Client Application
-│   ├── Components
-│   ├── State Management
-│   ├── API Integration
-│   └── UI Framework
-├── Server Infrastructure
-│   ├── Authentication
-│   ├── API Routes
-│   └── WebSocket Services
-└── Database Layer
+1. Install dependencies:
+```bash
+npm install
 ```
 
-## Implementation Guide
+2. Start development server:
+```bash
+npm run dev
+```
 
-1. Initialize the environment:
-   ```bash
-   npm install
-   ```
+3. Access application:
+```
+http://0.0.0.0:5000
+```
 
-2. Launch development instance:
-   ```bash
-   npm run dev
-   ```
+## Development Commands
+- `npm run dev` - Launch development environment
+- `npm run build` - Create production build
+- `npm run start` - Start production server
+- `npm run check` - Verify system integrity
+- `npm run db:push` - Update database schema
 
-3. Access system interface:
-   `http://0.0.0.0:5000`
-
-## Administrative Commands
-
-- `npm run dev` - Development environment
-- `npm run build` - Production build
-- `npm run start` - Production deployment
-- `npm run check` - System verification
-- `npm run db:push` - Database schema update
-
-## Security Configuration
-
+## Environment Configuration
 Required environment variables:
 - `DATABASE_URL`: PostgreSQL connection string
-- Additional security parameters configurable via environment
+- Additional configuration via `.env` file
 
-## Compliance & Licensing
+## Security
+- End-to-end encryption
+- Role-based access control
+- Session management
+- Audit logging
 
-This software is distributed under the MIT License.
+## License
+MIT License
 
 ## Support
-
-For technical support and system inquiries, please contact the development team.
+For technical assistance, contact the development team through the project's support channels.
 
 ---
 © 2024 NINDA. All rights reserved.
