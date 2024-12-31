@@ -1,5 +1,7 @@
 
-# Full-Stack Web Application
+# NINDA (National Intelligence Network Data Analyzer)
+
+NINDA is a web-based intelligence management system designed for law enforcement, private security companies, and intelligence agencies. It aligns with the National Intelligence Model framework and provides comprehensive tools for information gathering, analysis, intelligence assessment, dissemination, resource allocation, and performance management.
 
 A modern web application built with React, Express, and PostgreSQL, featuring authentication, real-time updates, and a responsive dashboard.
 
