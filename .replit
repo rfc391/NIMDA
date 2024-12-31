@@ -1,5 +1,4 @@
-
-modules = ["nodejs-20", "web", "postgresql-16"]
+modules = ["nodejs-20", "web", "postgresql-16", "python-3.11"]
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
@@ -16,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Full Development Stack"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Full Development Stack"
@@ -35,3 +34,26 @@ waitForPort = 5173
 task = "shell.exec"
 args = "npm run dev:server"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Database Migration"
+
+[[workflows.workflow]]
+name = "Database Migration"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run db:push"

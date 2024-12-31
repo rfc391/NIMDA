@@ -1,17 +1,25 @@
-
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { alerts, intelligence, annotations, feedback } from "@db/schema";
+import { alerts, intelligence, annotations, feedback, users, type User } from "@db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { setupWebSocket } from "./websocket";
 import { processIntelligence } from "./services/ai";
 
-// Authentication middleware
-const requireAuth = (req: any, res: any, next: any) => {
+// Authentication middleware with proper types
+interface AuthenticatedRequest extends Request {
+  user?: User;
+  isAuthenticated(): this is { user: User };
+}
+
+const requireAuth = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   if (!req.isAuthenticated()) {
-    return res.status(401).send("Not authenticated");
+    return res.status(401).json({ error: "Not authenticated" });
   }
   next();
 };
@@ -20,7 +28,7 @@ export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Intelligence routes
-  app.get("/api/intelligence", requireAuth, async (req, res) => {
+  app.get("/api/intelligence", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const data = await db.query.intelligence.findMany({
         with: { feedback: true },
@@ -41,21 +49,25 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/intelligence", requireAuth, async (req, res) => {
+  app.post("/api/intelligence", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { title, content, classification, metadata } = req.body;
-      
-      const aiProcessed = await processIntelligence({ 
+
+      const initialData = {
         id: 0,
-        title, 
-        content, 
+        title,
+        content,
         classification,
         metadata: metadata || null,
-        aiProcessed: null, 
+        aiProcessed: null,
+        status: "draft" as const,
         createdBy: req.user.id,
+        lastModifiedBy: req.user.id,
         createdAt: new Date(),
         updatedAt: new Date(),
-      });
+      };
+
+      const aiProcessed = await processIntelligence(initialData);
 
       const [intel] = await db.insert(intelligence)
         .values({
@@ -64,7 +76,9 @@ export function registerRoutes(app: Express): Server {
           classification,
           metadata,
           aiProcessed,
-          createdBy: req.user.id
+          status: "draft",
+          createdBy: req.user.id,
+          lastModifiedBy: req.user.id
         })
         .returning();
       res.json(intel);
@@ -74,7 +88,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Feedback routes
-  app.get("/api/intelligence/:id/feedback", requireAuth, async (req, res) => {
+  app.get("/api/intelligence/:id/feedback", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const data = await db
@@ -89,7 +103,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/intelligence/:id/feedback", requireAuth, async (req, res) => {
+  app.post("/api/intelligence/:id/feedback", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { rating, comment } = req.body;
@@ -126,7 +140,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Annotations routes
-  app.get("/api/intelligence/:id/annotations", requireAuth, async (req, res) => {
+  app.get("/api/intelligence/:id/annotations", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const data = await db
@@ -141,7 +155,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/intelligence/:id/annotations", requireAuth, async (req, res) => {
+  app.post("/api/intelligence/:id/annotations", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { content, startOffset, endOffset, parentId } = req.body;
@@ -165,7 +179,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Alerts routes
-  app.get("/api/alerts", requireAuth, async (req, res) => {
+  app.get("/api/alerts", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const data = await db.select().from(alerts).orderBy(alerts.createdAt);
       res.json(data);
@@ -174,15 +188,17 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/alerts", requireAuth, async (req, res) => {
+  app.post("/api/alerts", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { title, description, priority } = req.body;
+
       const [alert] = await db.insert(alerts)
         .values({
           title,
           description,
           priority,
-          createdBy: req.user.id
+          createdBy: req.user.id,
+          status: "active",
         })
         .returning();
       res.json(alert);
