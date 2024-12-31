@@ -2,8 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { alerts, intelligence } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { alerts, intelligence, annotations } from "@db/schema";
+import { eq, and } from "drizzle-orm";
 import { setupWebSocket } from "./websocket";
 import { processIntelligence } from "./services/ai";
 
@@ -49,6 +49,45 @@ export function registerRoutes(app: Express): Server {
       })
       .returning();
     res.json(intel);
+  });
+
+  // Annotations routes
+  app.get("/api/intelligence/:id/annotations", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { id } = req.params;
+    const data = await db
+      .select()
+      .from(annotations)
+      .where(eq(annotations.intelligenceId, parseInt(id)))
+      .orderBy(annotations.createdAt);
+
+    res.json(data);
+  });
+
+  app.post("/api/intelligence/:id/annotations", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { id } = req.params;
+    const { content, startOffset, endOffset, parentId } = req.body;
+
+    const [annotation] = await db
+      .insert(annotations)
+      .values({
+        content,
+        intelligenceId: parseInt(id),
+        createdBy: req.user.id,
+        startOffset,
+        endOffset,
+        parentId: parentId || null,
+      })
+      .returning();
+
+    res.json(annotation);
   });
 
   // Alerts routes

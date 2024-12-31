@@ -8,7 +8,8 @@ interface Client {
   userId: number;
   username: string;
   typing?: {
-    type: 'intelligence' | 'alert';
+    type: 'intelligence' | 'alert' | 'annotation';
+    id?: number; // Intelligence or annotation ID for context
     timestamp: number;
   };
 }
@@ -70,6 +71,10 @@ export function setupWebSocket(server: Server, app: Express) {
           case 'typing_end':
             handleTypingStatus(message, client);
             break;
+          case 'annotation_created':
+          case 'annotation_updated':
+            broadcastToRoom(message, clientId, message.data.intelligenceId);
+            break;
           case 'filter_change':
             broadcastToRoom(message, clientId);
             break;
@@ -100,6 +105,7 @@ export function setupWebSocket(server: Server, app: Express) {
     if (message.type === 'typing_start') {
       client.typing = {
         type: message.data.type,
+        id: message.data.id,
         timestamp: now,
       };
     } else {
@@ -112,21 +118,22 @@ export function setupWebSocket(server: Server, app: Express) {
       data: {
         username: client.username,
         type: message.data.type,
+        id: message.data.id,
       }
     }, client.id);
   }
 
-  function broadcastToRoom(message: any, senderId: string) {
+  function broadcastToRoom(message: any, senderId: string, roomId?: number) {
     const outbound = JSON.stringify({
       ...message,
       senderId,
     });
 
-    // Only send to clients viewing the same type of content
+    // Only send to clients viewing the same content
     clients.forEach(client => {
       if (client.id !== senderId && 
           client.ws.readyState === WebSocket.OPEN &&
-          (!message.room || client.typing?.type === message.room)) {
+          (!roomId || client.typing?.id === roomId)) {
         client.ws.send(outbound);
       }
     });

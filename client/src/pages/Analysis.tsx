@@ -11,8 +11,10 @@ import { Loader2, UserCircle, PencilLine } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { Badge } from "@/components/ui/badge";
 import { debounce } from "lodash";
+import Annotations from "@/components/Annotations";
 
 export default function Analysis() {
+  const [selectedIntelligence, setSelectedIntelligence] = useState<number | null>(null);
   const [newIntel, setNewIntel] = useState({
     title: "",
     content: "",
@@ -144,8 +146,8 @@ export default function Analysis() {
   }
 
   return (
-    <div className="p-4 grid gap-4 md:grid-cols-2">
-      <div className="space-y-4">
+    <div className="p-4 space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
@@ -211,95 +213,47 @@ export default function Analysis() {
 
         <Card>
           <CardHeader>
-            <CardTitle>AI Analysis</CardTitle>
+            <CardTitle>Intelligence Reports</CardTitle>
+            <Input
+              placeholder="Search reports..."
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="mt-2"
+            />
           </CardHeader>
           <CardContent>
-            {intelligence?.slice(0, 1).map((intel) => (
-              <div key={intel.id} className="space-y-4">
-                {intel.aiProcessed && (
-                  <>
-                    <div>
-                      <h3 className="font-medium mb-2">Summary</h3>
-                      <p className="text-sm text-muted-foreground">{intel.aiProcessed.summary}</p>
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-2">Key Entities</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {intel.aiProcessed.entities.map((entity: string) => (
-                          <Badge key={entity} variant="secondary">
-                            {entity}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-2">Analysis</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm text-muted-foreground">Sentiment</span>
-                          <Badge variant={
-                            intel.aiProcessed.sentiment === "positive" ? "default" :
-                            intel.aiProcessed.sentiment === "negative" ? "destructive" : "secondary"
-                          }>
-                            {intel.aiProcessed.sentiment}
-                          </Badge>
-                        </div>
-                        <div>
-                          <span className="text-sm text-muted-foreground">Confidence</span>
-                          <Badge variant="outline">
-                            {Math.round(intel.aiProcessed.confidence * 100)}%
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-2">Recommendations</h3>
-                      <ul className="list-disc list-inside text-sm text-muted-foreground">
-                        {intel.aiProcessed.recommendations.map((rec: string) => (
-                          <li key={rec}>{rec}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+            <div className="space-y-4">
+              {filteredIntelligence?.map((intel) => (
+                <div
+                  key={intel.id}
+                  className="p-4 border rounded-lg space-y-2 cursor-pointer hover:bg-accent"
+                  onClick={() => setSelectedIntelligence(intel.id)}
+                >
+                  <div className="font-medium">{intel.title}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {intel.content.slice(0, 100)}...
+                  </div>
+                  <div className="text-sm flex justify-between items-center">
+                    <span>Classification: {intel.classification}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {new Date(intel.createdAt).toLocaleString()}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Intelligence Reports</CardTitle>
-          <Input
-            placeholder="Search reports..."
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="mt-2"
+      {selectedIntelligence && intelligence?.find(i => i.id === selectedIntelligence) && (
+        <div className="mt-8">
+          <Annotations
+            intelligenceId={selectedIntelligence}
+            content={intelligence.find(i => i.id === selectedIntelligence).content}
           />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredIntelligence?.map((intel) => (
-              <div
-                key={intel.id}
-                className="p-4 border rounded-lg space-y-2"
-              >
-                <div className="font-medium">{intel.title}</div>
-                <div className="text-sm text-muted-foreground">
-                  {intel.content}
-                </div>
-                <div className="text-sm flex justify-between items-center">
-                  <span>Classification: {intel.classification}</span>
-                  <Badge variant="outline" className="text-xs">
-                    {new Date(intel.createdAt).toLocaleString()}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 }
