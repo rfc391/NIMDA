@@ -4,7 +4,11 @@
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
     "build": "tsc && vite build",
-    "start": "node dist/server/index.js"
+    "start": "node dist/server/index.js",
+    "lint": "eslint . --ext ts,tsx --fix",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,tsx,css,json,yml}\""
   },
   "dependencies": {
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
