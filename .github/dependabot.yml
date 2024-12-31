@@ -5,8 +5,7 @@ updates:
       - "/updater"
       - "/"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
     groups:
       sorbet:
@@ -34,8 +33,7 @@ updates:
     directories:
       - "/composer/helpers/v2"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
     groups:
       prod-dependencies:
@@ -51,8 +49,7 @@ updates:
   - package-ecosystem: "devcontainers"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
   - package-ecosystem: "docker"
     directories:
@@ -60,14 +57,12 @@ updates:
       - "/go_modules"
       - "/cargo"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
     groups:
       all-actions:
@@ -75,20 +70,17 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/go_modules/helpers"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
   - package-ecosystem: "mix"
     directory: "/hex/helpers"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
   - package-ecosystem: "npm"
     directory: "/npm_and_yarn/helpers"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
     groups:
       npm-dependencies:
@@ -117,8 +109,7 @@ updates:
   - package-ecosystem: "pip"
     directory: "/python/helpers"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
     groups:
       common:
@@ -140,24 +131,20 @@ updates:
   - package-ecosystem: "pub"
     directory: "/pub/helpers"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
   - package-ecosystem: "nuget"
     directory: "/nuget/helpers/lib/NuGetUpdater"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
   - package-ecosystem: "dotnet-sdk"
     directory: "/nuget/helpers/lib/NuGetUpdater"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
   - package-ecosystem: "gitsubmodule"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
       time: "16:00"
