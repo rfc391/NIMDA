@@ -38,11 +38,19 @@ export const annotations = pgTable("annotations", {
   createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-  // Track position/selection in the intelligence content
   startOffset: integer("start_offset").notNull(),
   endOffset: integer("end_offset").notNull(),
-  // For threading/replies
   parentId: integer("parent_id").references(() => annotations.id),
+});
+
+export const feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  intelligenceId: integer("intelligence_id").references(() => intelligence.id).notNull(),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users);
@@ -55,5 +63,8 @@ export type Intelligence = typeof intelligence.$inferSelect;
 export type Annotation = typeof annotations.$inferSelect;
 export type InsertAnnotation = typeof annotations.$inferInsert;
 
-// Create the insert schema for annotations
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = typeof feedback.$inferInsert;
+
 export const insertAnnotationSchema = createInsertSchema(annotations);
+export const insertFeedbackSchema = createInsertSchema(feedback);

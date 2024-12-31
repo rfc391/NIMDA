@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { Loader2, UserCircle, PencilLine } from "lucide-react";
+import { Loader2, UserCircle, PencilLine, Star, StarIcon } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { Badge } from "@/components/ui/badge";
 import { debounce } from "lodash";
@@ -20,6 +20,10 @@ export default function Analysis() {
     content: "",
     classification: "unclassified",
   });
+  const [newFeedback, setNewFeedback] = useState({
+    rating: 0,
+    comment: "",
+  });
   const [typingUsers, setTypingUsers] = useState(new Set<string>());
   const [activeUsers, setActiveUsers] = useState(new Set<string>());
   const [filter, setFilter] = useState("");
@@ -31,6 +35,12 @@ export default function Analysis() {
 
   const { data: intelligence, isLoading } = useQuery<any[]>({
     queryKey: ["/api/intelligence"],
+  });
+
+  // Fetch feedback for selected intelligence
+  const { data: feedback } = useQuery({
+    queryKey: [`/api/intelligence/${selectedIntelligence}/feedback`],
+    enabled: !!selectedIntelligence,
   });
 
   // Debounced typing notification
@@ -51,6 +61,14 @@ export default function Analysis() {
         toast({
           title: "New Intelligence Report",
           description: `${message.data.username} created a new report: ${message.data.title}`,
+        });
+      } else if (message.type === "feedback_created") {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/intelligence/${message.data.intelligenceId}/feedback`] 
+        });
+        toast({
+          title: "New Feedback",
+          description: `${message.data.username} provided feedback`,
         });
       } else if (message.type === "user_active") {
         setActiveUsers((prev) => new Set([...Array.from(prev), message.data.username]));
@@ -136,6 +154,63 @@ export default function Analysis() {
       });
     },
   });
+
+  const createFeedbackMutation = useMutation({
+    mutationFn: async ({ id, feedback }: { id: number, feedback: typeof newFeedback }) => {
+      const res = await fetch(`/api/intelligence/${id}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(feedback),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/intelligence/${selectedIntelligence}/feedback`] 
+      });
+      toast({ title: "Success", description: "Feedback submitted" });
+      setNewFeedback({ rating: 0, comment: "" });
+
+      // Notify other users
+      sendMessage({
+        type: "feedback_created",
+        data: {
+          username: user?.username,
+          intelligenceId: selectedIntelligence,
+        },
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+  const renderStars = (rating: number, interactive = false) => {
+    return (
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => interactive && setNewFeedback({ ...newFeedback, rating: star })}
+            className={interactive ? "cursor-pointer" : "cursor-default"}
+          >
+            {star <= (interactive ? newFeedback.rating : rating) ? (
+              <StarIcon className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+            ) : (
+              <Star className="h-5 w-5 text-muted-foreground" />
+            )}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -239,6 +314,14 @@ export default function Analysis() {
                       {new Date(intel.createdAt).toLocaleString()}
                     </Badge>
                   </div>
+                  {intel.averageRating && (
+                    <div className="flex items-center gap-2">
+                      {renderStars(intel.averageRating)}
+                      <span className="text-sm text-muted-foreground">
+                        ({intel.feedbackCount} reviews)
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -247,7 +330,70 @@ export default function Analysis() {
       </div>
 
       {selectedIntelligence && intelligence?.find(i => i.id === selectedIntelligence) && (
-        <div className="mt-8">
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Feedback & Ratings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newFeedback.rating) {
+                    toast({
+                      variant: "destructive",
+                      title: "Error",
+                      description: "Please provide a rating",
+                    });
+                    return;
+                  }
+                  createFeedbackMutation.mutate({
+                    id: selectedIntelligence,
+                    feedback: newFeedback,
+                  });
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Your Rating</label>
+                  {renderStars(0, true)}
+                </div>
+                <Textarea
+                  placeholder="Your feedback (optional)"
+                  value={newFeedback.comment}
+                  onChange={(e) => setNewFeedback({ ...newFeedback, comment: e.target.value })}
+                />
+                <Button type="submit" disabled={createFeedbackMutation.isPending}>
+                  {createFeedbackMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Submit Feedback
+                </Button>
+              </form>
+
+              <div className="mt-8 space-y-4">
+                <h3 className="font-medium">Recent Feedback</h3>
+                {feedback?.map((item: any) => (
+                  <div key={item.id} className="p-4 border rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <UserCircle className="h-5 w-5" />
+                        <span className="font-medium">Anonymous User</span>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {new Date(item.createdAt).toLocaleString()}
+                      </Badge>
+                    </div>
+                    {renderStars(item.rating)}
+                    {item.comment && (
+                      <p className="text-sm text-muted-foreground mt-2">{item.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
           <Annotations
             intelligenceId={selectedIntelligence}
             content={intelligence.find(i => i.id === selectedIntelligence).content}

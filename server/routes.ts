@@ -2,8 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { alerts, intelligence, annotations } from "@db/schema";
-import { eq, and } from "drizzle-orm";
+import { alerts, intelligence, annotations, feedback } from "@db/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { setupWebSocket } from "./websocket";
 import { processIntelligence } from "./services/ai";
 
@@ -15,8 +15,25 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
-    const data = await db.select().from(intelligence).orderBy(intelligence.createdAt);
-    res.json(data);
+
+    // Get intelligence with average ratings
+    const data = await db.query.intelligence.findMany({
+      with: {
+        feedback: true,
+      },
+      orderBy: desc(intelligence.createdAt),
+    });
+
+    // Calculate average ratings and total feedback count
+    const processedData = data.map(intel => ({
+      ...intel,
+      averageRating: intel.feedback?.length 
+        ? intel.feedback.reduce((sum, f) => sum + f.rating, 0) / intel.feedback.length 
+        : null,
+      feedbackCount: intel.feedback?.length || 0
+    }));
+
+    res.json(processedData);
   });
 
   app.post("/api/intelligence", async (req, res) => {
@@ -49,6 +66,59 @@ export function registerRoutes(app: Express): Server {
       })
       .returning();
     res.json(intel);
+  });
+
+  // Feedback routes
+  app.get("/api/intelligence/:id/feedback", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { id } = req.params;
+    const data = await db
+      .select()
+      .from(feedback)
+      .where(eq(feedback.intelligenceId, parseInt(id)))
+      .orderBy(feedback.createdAt);
+
+    res.json(data);
+  });
+
+  app.post("/api/intelligence/:id/feedback", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+
+    // Check if user has already provided feedback
+    const [existingFeedback] = await db
+      .select()
+      .from(feedback)
+      .where(
+        and(
+          eq(feedback.intelligenceId, parseInt(id)),
+          eq(feedback.createdBy, req.user.id)
+        )
+      )
+      .limit(1);
+
+    if (existingFeedback) {
+      return res.status(400).send("You have already provided feedback for this report");
+    }
+
+    const [newFeedback] = await db
+      .insert(feedback)
+      .values({
+        intelligenceId: parseInt(id),
+        createdBy: req.user.id,
+        rating,
+        comment,
+      })
+      .returning();
+
+    res.json(newFeedback);
   });
 
   // Annotations routes
