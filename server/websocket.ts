@@ -15,33 +15,30 @@ interface Client {
   };
 }
 
+interface BroadcastMessage {
+  type: string;
+  data?: any;
+  senderId: string;
+}
+
 export function setupWebSocket(server: Server, app: Express) {
   const wss = new WebSocketServer({ noServer: true });
   let clients: Client[] = [];
 
-  function broadcast(message: any, senderId: string) {
-    const outbound = JSON.stringify({
-      ...message,
-      senderId,
-    });
-
-    clients.forEach(client => {
-      if (client.id !== senderId && client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(outbound);
-      }
-    });
+  function broadcast(message: BroadcastMessage, senderId: string) {
+    broadcastToRoom(message, senderId);
   }
 
-  function broadcastToRoom(message: any, senderId: string, roomId?: number) {
-    const outbound = JSON.stringify({
-      ...message,
-      senderId,
-    });
+  function broadcastToRoom(message: BroadcastMessage, senderId: string, roomId?: number) {
+    const outbound = JSON.stringify({ ...message, senderId });
 
     clients.forEach(client => {
-      if (client.id !== senderId && 
-          client.ws.readyState === WebSocket.OPEN &&
-          (!roomId || client.typing?.id === roomId)) {
+      const shouldSendToClient = 
+        client.id !== senderId && 
+        client.ws.readyState === WebSocket.OPEN &&
+        (!roomId || client.typing?.id === roomId);
+
+      if (shouldSendToClient) {
         client.ws.send(outbound);
       }
     });
@@ -67,10 +64,26 @@ export function setupWebSocket(server: Server, app: Express) {
     }, client.id);
   }
 
-  server.on('upgrade', (request, socket, head) => {
-    if (request.headers['sec-websocket-protocol'] === 'vite-hmr') {
-      return;
+  function handleMessage(rawMessage: string, client: Client) {
+    try {
+      const message = JSON.parse(rawMessage);
+      const messageHandlers = {
+        'typing_start': () => handleTypingStatus(message, client),
+        'typing_end': () => handleTypingStatus(message, client),
+        'annotation_created': () => broadcastToRoom(message, client.id, message.data.intelligenceId),
+        'annotation_updated': () => broadcastToRoom(message, client.id, message.data.intelligenceId),
+        'filter_change': () => broadcastToRoom(message, client.id),
+        'default': () => broadcast(message, client.id)
+      };
+
+      (messageHandlers[message.type] || messageHandlers.default)();
+    } catch (error) {
+      console.error('Failed to parse message:', error);
     }
+  }
+
+  server.on('upgrade', (request, socket, head) => {
+    if (request.headers['sec-websocket-protocol'] === 'vite-hmr') return;
 
     app.request.sessionParser(request as any, {} as any, () => {
       if (!(request as any).session?.passport?.user) {
@@ -79,18 +92,17 @@ export function setupWebSocket(server: Server, app: Express) {
         return;
       }
 
-      wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.handleUpgrade(request, socket, head, ws => {
         wss.emit('connection', ws, request);
       });
     });
   });
 
   wss.on('connection', (ws, request: any) => {
-    const userId = request.session.passport.user;
-    const username = request.session.passport.username;
+    const { user: userId, username } = request.session.passport;
     const clientId = Math.random().toString(36).substring(7);
-
     const client: Client = { id: clientId, ws, userId, username };
+    
     clients.push(client);
 
     ws.send(JSON.stringify({
@@ -101,28 +113,7 @@ export function setupWebSocket(server: Server, app: Express) {
 
     broadcast({ type: 'user_active', data: { username } }, clientId);
 
-    ws.on('message', (rawMessage) => {
-      try {
-        const message = JSON.parse(rawMessage.toString());
-        switch (message.type) {
-          case 'typing_start':
-          case 'typing_end':
-            handleTypingStatus(message, client);
-            break;
-          case 'annotation_created':
-          case 'annotation_updated':
-            broadcastToRoom(message, clientId, message.data.intelligenceId);
-            break;
-          case 'filter_change':
-            broadcastToRoom(message, clientId);
-            break;
-          default:
-            broadcast(message, clientId);
-        }
-      } catch (error) {
-        console.error('Failed to parse message:', error);
-      }
-    });
+    ws.on('message', message => handleMessage(message.toString(), client));
 
     ws.on('close', () => {
       clients = clients.filter(c => c.id !== clientId);
