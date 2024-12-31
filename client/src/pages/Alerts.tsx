@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,10 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Loader2, UserCircle } from "lucide-react";
+import { AlertCircle, Loader2, UserCircle, PencilLine } from "lucide-react";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useUser } from "@/hooks/use-user";
 import { Badge } from "@/components/ui/badge";
+import { debounce } from "lodash";
 
 export default function Alerts() {
   const [newAlert, setNewAlert] = useState({
@@ -17,24 +18,34 @@ export default function Alerts() {
     description: "",
     priority: "medium",
   });
+  const [typingUsers, setTypingUsers] = useState(new Set<string>());
+  const [activeUsers, setActiveUsers] = useState(new Set<string>());
+  const [filter, setFilter] = useState("");
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useUser();
-  const { sendMessage, subscribe } = useWebSocket();
-  const [activeUsers, setActiveUsers] = useState(new Set<string>());
+  const { sendMessage, subscribe, startTyping, stopTyping } = useWebSocket();
 
   const { data: alerts, isLoading } = useQuery<any[]>({
     queryKey: ["/api/alerts"],
   });
 
+  // Debounced typing notification
+  const debouncedStartTyping = useCallback(
+    debounce(() => startTyping('alert'), 500),
+    [startTyping]
+  );
+
+  const debouncedStopTyping = useCallback(
+    debounce(() => stopTyping('alert'), 500),
+    [stopTyping]
+  );
+
   useEffect(() => {
-    // Subscribe to real-time updates
     const unsubscribe = subscribe((message) => {
       if (message.type === "alert_created") {
-        // Refresh alerts data
         queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
-        // Show notification
         toast({
           title: "New Alert Created",
           description: `${message.data.username} created a new alert: ${message.data.title}`,
@@ -48,10 +59,17 @@ export default function Alerts() {
           newSet.delete(message.data.username);
           return newSet;
         });
+      } else if (message.type === "typing_start" && message.data.type === "alert") {
+        setTypingUsers((prev) => new Set([...prev, message.data.username]));
+      } else if (message.type === "typing_end" && message.data.type === "alert") {
+        setTypingUsers((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(message.data.username);
+          return newSet;
+        });
       }
     });
 
-    // Announce presence
     sendMessage({
       type: "user_active",
       data: { username: user?.username },
@@ -64,7 +82,25 @@ export default function Alerts() {
         data: { username: user?.username },
       });
     };
-  }, [subscribe, sendMessage, queryClient, toast, user]);
+  }, [subscribe, sendMessage, queryClient, toast, user, debouncedStartTyping, debouncedStopTyping]);
+
+  // Handle input changes with typing indicators
+  const handleInputChange = (field: keyof typeof newAlert) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setNewAlert({ ...newAlert, [field]: e.target.value });
+    debouncedStartTyping();
+  };
+
+  const handleInputBlur = () => {
+    debouncedStopTyping();
+  }
+
+  const filteredAlerts = alerts?.filter((alert) =>
+    alert.title.toLowerCase().includes(filter.toLowerCase()) ||
+    alert.description.toLowerCase().includes(filter.toLowerCase()) ||
+    alert.priority.toLowerCase().includes(filter.toLowerCase())
+  );
 
   const createAlertMutation = useMutation({
     mutationFn: async (alert: typeof newAlert) => {
@@ -124,6 +160,9 @@ export default function Alerts() {
                 <Badge key={username} variant="outline" className="gap-2">
                   <UserCircle className="h-4 w-4" />
                   {username}
+                  {typingUsers.has(username) && (
+                    <PencilLine className="h-3 w-3 ml-1 animate-pulse" />
+                  )}
                 </Badge>
               ))}
             </div>
@@ -140,16 +179,14 @@ export default function Alerts() {
             <Input
               placeholder="Title"
               value={newAlert.title}
-              onChange={(e) =>
-                setNewAlert({ ...newAlert, title: e.target.value })
-              }
+              onChange={handleInputChange("title")}
+              onBlur={handleInputBlur}
             />
             <Textarea
               placeholder="Description"
               value={newAlert.description}
-              onChange={(e) =>
-                setNewAlert({ ...newAlert, description: e.target.value })
-              }
+              onChange={handleInputChange("description")}
+              onBlur={handleInputBlur}
             />
             <Select
               value={newAlert.priority}
@@ -180,10 +217,16 @@ export default function Alerts() {
       <Card>
         <CardHeader>
           <CardTitle>Active Alerts</CardTitle>
+          <Input
+            placeholder="Search alerts..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="mt-2"
+          />
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {alerts?.map((alert) => (
+            {filteredAlerts?.map((alert) => (
               <div
                 key={alert.id}
                 className={`p-4 border rounded-lg space-y-2 ${

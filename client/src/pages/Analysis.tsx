@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { Loader2, UserCircle } from "lucide-react";
+import { Loader2, UserCircle, PencilLine } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { Badge } from "@/components/ui/badge";
+import { debounce } from "lodash";
 
 export default function Analysis() {
   const [newIntel, setNewIntel] = useState({
@@ -17,24 +18,34 @@ export default function Analysis() {
     content: "",
     classification: "unclassified",
   });
+  const [typingUsers, setTypingUsers] = useState(new Set<string>());
+  const [activeUsers, setActiveUsers] = useState(new Set<string>());
+  const [filter, setFilter] = useState("");
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useUser();
-  const { sendMessage, subscribe } = useWebSocket();
-  const [activeUsers, setActiveUsers] = useState(new Set<string>());
+  const { sendMessage, subscribe, startTyping, stopTyping } = useWebSocket();
 
   const { data: intelligence, isLoading } = useQuery<any[]>({
     queryKey: ["/api/intelligence"],
   });
 
+  // Debounced typing notification
+  const debouncedStartTyping = useCallback(
+    debounce(() => startTyping('intelligence'), 500),
+    [startTyping]
+  );
+
+  const debouncedStopTyping = useCallback(
+    debounce(() => stopTyping('intelligence'), 500),
+    [stopTyping]
+  );
+
   useEffect(() => {
-    // Subscribe to real-time updates
     const unsubscribe = subscribe((message) => {
       if (message.type === "intelligence_created") {
-        // Refresh intelligence data
         queryClient.invalidateQueries({ queryKey: ["/api/intelligence"] });
-        // Show notification
         toast({
           title: "New Intelligence Report",
           description: `${message.data.username} created a new report: ${message.data.title}`,
@@ -47,10 +58,17 @@ export default function Analysis() {
           newSet.delete(message.data.username);
           return newSet;
         });
+      } else if (message.type === "typing_start" && message.data.type === "intelligence") {
+        setTypingUsers((prev) => new Set([...prev, message.data.username]));
+      } else if (message.type === "typing_end" && message.data.type === "intelligence") {
+        setTypingUsers((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(message.data.username);
+          return newSet;
+        });
       }
     });
 
-    // Announce presence
     sendMessage({
       type: "user_active",
       data: { username: user?.username },
@@ -63,7 +81,25 @@ export default function Analysis() {
         data: { username: user?.username },
       });
     };
-  }, [subscribe, sendMessage, queryClient, toast, user]);
+  }, [subscribe, sendMessage, queryClient, toast, user, startTyping, stopTyping]);
+
+  // Handle input changes with typing indicators
+  const handleInputChange = (field: keyof typeof newIntel) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setNewIntel({ ...newIntel, [field]: e.target.value });
+    debouncedStartTyping();
+  };
+
+  const handleInputBlur = () => {
+    debouncedStopTyping();
+  }
+
+  const filteredIntelligence = intelligence?.filter((intel) =>
+    intel.title.toLowerCase().includes(filter.toLowerCase()) ||
+    intel.content.toLowerCase().includes(filter.toLowerCase()) ||
+    intel.classification.toLowerCase().includes(filter.toLowerCase())
+  );
 
   const createIntelMutation = useMutation({
     mutationFn: async (intel: typeof newIntel) => {
@@ -119,6 +155,9 @@ export default function Analysis() {
                   <Badge key={username} variant="outline" className="gap-2">
                     <UserCircle className="h-4 w-4" />
                     {username}
+                    {typingUsers.has(username) && (
+                      <PencilLine className="h-3 w-3 ml-1 animate-pulse" />
+                    )}
                   </Badge>
                 ))}
               </div>
@@ -135,16 +174,14 @@ export default function Analysis() {
               <Input
                 placeholder="Title"
                 value={newIntel.title}
-                onChange={(e) =>
-                  setNewIntel({ ...newIntel, title: e.target.value })
-                }
+                onChange={handleInputChange("title")}
+                onBlur={handleInputBlur}
               />
               <Textarea
                 placeholder="Content"
                 value={newIntel.content}
-                onChange={(e) =>
-                  setNewIntel({ ...newIntel, content: e.target.value })
-                }
+                onChange={handleInputChange("content")}
+                onBlur={handleInputBlur}
               />
               <Select
                 value={newIntel.classification}
@@ -176,10 +213,16 @@ export default function Analysis() {
       <Card>
         <CardHeader>
           <CardTitle>Intelligence Reports</CardTitle>
+          <Input
+            placeholder="Search reports..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="mt-2"
+          />
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {intelligence?.map((intel) => (
+            {filteredIntelligence?.map((intel) => (
               <div
                 key={intel.id}
                 className="p-4 border rounded-lg space-y-2"
