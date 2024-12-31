@@ -5,6 +5,7 @@ import { db } from "@db";
 import { alerts, intelligence } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { setupWebSocket } from "./websocket";
+import { processIntelligence } from "./services/ai";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -23,12 +24,27 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).send("Not authenticated");
     }
     const { title, content, classification, metadata } = req.body;
+
+    // Process with AI
+    const aiProcessed = await processIntelligence({ 
+      id: 0, // Temporary ID for processing
+      title, 
+      content, 
+      classification,
+      metadata: metadata || null,
+      aiProcessed: null, 
+      createdBy: req.user.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
     const [intel] = await db.insert(intelligence)
       .values({
         title,
         content,
         classification,
         metadata,
+        aiProcessed,
         createdBy: req.user.id
       })
       .returning();

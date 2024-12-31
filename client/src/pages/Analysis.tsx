@@ -51,18 +51,18 @@ export default function Analysis() {
           description: `${message.data.username} created a new report: ${message.data.title}`,
         });
       } else if (message.type === "user_active") {
-        setActiveUsers((prev) => new Set([...prev, message.data.username]));
+        setActiveUsers((prev) => new Set([...Array.from(prev), message.data.username]));
       } else if (message.type === "user_inactive") {
         setActiveUsers((prev) => {
-          const newSet = new Set(prev);
+          const newSet = new Set(Array.from(prev));
           newSet.delete(message.data.username);
           return newSet;
         });
       } else if (message.type === "typing_start" && message.data.type === "intelligence") {
-        setTypingUsers((prev) => new Set([...prev, message.data.username]));
+        setTypingUsers((prev) => new Set([...Array.from(prev), message.data.username]));
       } else if (message.type === "typing_end" && message.data.type === "intelligence") {
         setTypingUsers((prev) => {
-          const newSet = new Set(prev);
+          const newSet = new Set(Array.from(prev));
           newSet.delete(message.data.username);
           return newSet;
         });
@@ -206,6 +206,64 @@ export default function Analysis() {
                 Create Report
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Analysis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {intelligence?.slice(0, 1).map((intel) => (
+              <div key={intel.id} className="space-y-4">
+                {intel.aiProcessed && (
+                  <>
+                    <div>
+                      <h3 className="font-medium mb-2">Summary</h3>
+                      <p className="text-sm text-muted-foreground">{intel.aiProcessed.summary}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-2">Key Entities</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {intel.aiProcessed.entities.map((entity: string) => (
+                          <Badge key={entity} variant="secondary">
+                            {entity}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-2">Analysis</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-sm text-muted-foreground">Sentiment</span>
+                          <Badge variant={
+                            intel.aiProcessed.sentiment === "positive" ? "default" :
+                            intel.aiProcessed.sentiment === "negative" ? "destructive" : "secondary"
+                          }>
+                            {intel.aiProcessed.sentiment}
+                          </Badge>
+                        </div>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Confidence</span>
+                          <Badge variant="outline">
+                            {Math.round(intel.aiProcessed.confidence * 100)}%
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-2">Recommendations</h3>
+                      <ul className="list-disc list-inside text-sm text-muted-foreground">
+                        {intel.aiProcessed.recommendations.map((rec: string) => (
+                          <li key={rec}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>

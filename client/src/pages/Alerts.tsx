@@ -52,18 +52,18 @@ export default function Alerts() {
           variant: message.data.priority === "critical" ? "destructive" : "default",
         });
       } else if (message.type === "user_active") {
-        setActiveUsers((prev) => new Set([...prev, message.data.username]));
+        setActiveUsers((prev) => new Set([...Array.from(prev), message.data.username]));
       } else if (message.type === "user_inactive") {
         setActiveUsers((prev) => {
-          const newSet = new Set(prev);
+          const newSet = new Set(Array.from(prev));
           newSet.delete(message.data.username);
           return newSet;
         });
       } else if (message.type === "typing_start" && message.data.type === "alert") {
-        setTypingUsers((prev) => new Set([...prev, message.data.username]));
+        setTypingUsers((prev) => new Set([...Array.from(prev), message.data.username]));
       } else if (message.type === "typing_end" && message.data.type === "alert") {
         setTypingUsers((prev) => {
-          const newSet = new Set(prev);
+          const newSet = new Set(Array.from(prev));
           newSet.delete(message.data.username);
           return newSet;
         });

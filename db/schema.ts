@@ -25,6 +25,7 @@ export const intelligence = pgTable("intelligence", {
   content: text("content").notNull(),
   classification: text("classification").notNull(),
   metadata: jsonb("metadata"),
+  aiProcessed: jsonb("ai_processed"),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
