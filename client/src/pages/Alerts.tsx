@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, UserCircle } from "lucide-react";
+import { useWebSocket } from "@/hooks/use-websocket";
+import { useUser } from "@/hooks/use-user";
+import { Badge } from "@/components/ui/badge";
 
 export default function Alerts() {
   const [newAlert, setNewAlert] = useState({
@@ -17,10 +20,51 @@ export default function Alerts() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useUser();
+  const { sendMessage, subscribe } = useWebSocket();
+  const [activeUsers, setActiveUsers] = useState(new Set<string>());
 
   const { data: alerts, isLoading } = useQuery<any[]>({
     queryKey: ["/api/alerts"],
   });
+
+  useEffect(() => {
+    // Subscribe to real-time updates
+    const unsubscribe = subscribe((message) => {
+      if (message.type === "alert_created") {
+        // Refresh alerts data
+        queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+        // Show notification
+        toast({
+          title: "New Alert Created",
+          description: `${message.data.username} created a new alert: ${message.data.title}`,
+          variant: message.data.priority === "critical" ? "destructive" : "default",
+        });
+      } else if (message.type === "user_active") {
+        setActiveUsers((prev) => new Set([...prev, message.data.username]));
+      } else if (message.type === "user_inactive") {
+        setActiveUsers((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(message.data.username);
+          return newSet;
+        });
+      }
+    });
+
+    // Announce presence
+    sendMessage({
+      type: "user_active",
+      data: { username: user?.username },
+    });
+
+    return () => {
+      unsubscribe?.();
+      sendMessage({
+        type: "user_inactive",
+        data: { username: user?.username },
+      });
+    };
+  }, [subscribe, sendMessage, queryClient, toast, user]);
 
   const createAlertMutation = useMutation({
     mutationFn: async (alert: typeof newAlert) => {
@@ -33,10 +77,24 @@ export default function Alerts() {
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
-      toast({ title: "Success", description: "Alert created" });
+      toast({ 
+        title: "Success", 
+        description: "Alert created",
+        variant: data.priority === "critical" ? "destructive" : "default"
+      });
       setNewAlert({ title: "", description: "", priority: "medium" });
+
+      // Notify other users
+      sendMessage({
+        type: "alert_created",
+        data: {
+          username: user?.username,
+          title: data.title,
+          priority: data.priority
+        },
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -59,7 +117,17 @@ export default function Alerts() {
     <div className="p-4 grid gap-4 md:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>Create Alert</CardTitle>
+          <CardTitle className="flex justify-between items-center">
+            Create Alert
+            <div className="flex gap-2">
+              {Array.from(activeUsers).map((username) => (
+                <Badge key={username} variant="outline" className="gap-2">
+                  <UserCircle className="h-4 w-4" />
+                  {username}
+                </Badge>
+              ))}
+            </div>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -133,7 +201,12 @@ export default function Alerts() {
                 <div className="text-sm text-muted-foreground">
                   {alert.description}
                 </div>
-                <div className="text-sm">Priority: {alert.priority}</div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Priority: {alert.priority}</span>
+                  <Badge variant="outline" className="text-xs">
+                    {new Date(alert.createdAt).toLocaleString()}
+                  </Badge>
+                </div>
               </div>
             ))}
           </div>
