@@ -1,3 +1,4 @@
+
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
@@ -7,219 +8,190 @@ import { eq, and, desc } from "drizzle-orm";
 import { setupWebSocket } from "./websocket";
 import { processIntelligence } from "./services/ai";
 
+// Authentication middleware
+const requireAuth = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).send("Not authenticated");
+  }
+  next();
+};
+
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Intelligence routes
-  app.get("/api/intelligence", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
+  app.get("/api/intelligence", requireAuth, async (req, res) => {
+    try {
+      const data = await db.query.intelligence.findMany({
+        with: { feedback: true },
+        orderBy: desc(intelligence.createdAt),
+      });
+
+      const processedData = data.map(intel => ({
+        ...intel,
+        averageRating: intel.feedback?.length 
+          ? intel.feedback.reduce((sum, f) => sum + f.rating, 0) / intel.feedback.length 
+          : null,
+        feedbackCount: intel.feedback?.length || 0
+      }));
+
+      res.json(processedData);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch intelligence data" });
     }
-
-    // Get intelligence with average ratings
-    const data = await db.query.intelligence.findMany({
-      with: {
-        feedback: true,
-      },
-      orderBy: desc(intelligence.createdAt),
-    });
-
-    // Calculate average ratings and total feedback count
-    const processedData = data.map(intel => ({
-      ...intel,
-      averageRating: intel.feedback?.length 
-        ? intel.feedback.reduce((sum, f) => sum + f.rating, 0) / intel.feedback.length 
-        : null,
-      feedbackCount: intel.feedback?.length || 0
-    }));
-
-    res.json(processedData);
   });
 
-  app.post("/api/intelligence", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
-    const { title, content, classification, metadata } = req.body;
-
-
-  app.post("/api/intelligence/batch", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
-    const { reports } = req.body;
-    
-    const processedReports = await Promise.all(
-      reports.map(async (report) => {
-        const aiProcessed = await processIntelligence({
-          id: 0,
-          ...report,
-          createdBy: req.user.id,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-        
-        return {
-          ...report,
-          aiProcessed,
-          createdBy: req.user.id,
-        };
-      })
-    );
-
-    const inserted = await db.insert(intelligence)
-      .values(processedReports)
-      .returning();
+  app.post("/api/intelligence", requireAuth, async (req, res) => {
+    try {
+      const { title, content, classification, metadata } = req.body;
       
-    res.json(inserted);
-  });
-
-    // Process with AI
-    const aiProcessed = await processIntelligence({ 
-      id: 0, // Temporary ID for processing
-      title, 
-      content, 
-      classification,
-      metadata: metadata || null,
-      aiProcessed: null, 
-      createdBy: req.user.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    const [intel] = await db.insert(intelligence)
-      .values({
-        title,
-        content,
+      const aiProcessed = await processIntelligence({ 
+        id: 0,
+        title, 
+        content, 
         classification,
-        metadata,
-        aiProcessed,
-        createdBy: req.user.id
-      })
-      .returning();
-    res.json(intel);
+        metadata: metadata || null,
+        aiProcessed: null, 
+        createdBy: req.user.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const [intel] = await db.insert(intelligence)
+        .values({
+          title,
+          content,
+          classification,
+          metadata,
+          aiProcessed,
+          createdBy: req.user.id
+        })
+        .returning();
+      res.json(intel);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create intelligence" });
+    }
   });
 
   // Feedback routes
-  app.get("/api/intelligence/:id/feedback", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
+  app.get("/api/intelligence/:id/feedback", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = await db
+        .select()
+        .from(feedback)
+        .where(eq(feedback.intelligenceId, parseInt(id)))
+        .orderBy(feedback.createdAt);
+
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch feedback" });
     }
-
-    const { id } = req.params;
-    const data = await db
-      .select()
-      .from(feedback)
-      .where(eq(feedback.intelligenceId, parseInt(id)))
-      .orderBy(feedback.createdAt);
-
-    res.json(data);
   });
 
-  app.post("/api/intelligence/:id/feedback", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
+  app.post("/api/intelligence/:id/feedback", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { rating, comment } = req.body;
 
-    const { id } = req.params;
-    const { rating, comment } = req.body;
-
-    // Check if user has already provided feedback
-    const [existingFeedback] = await db
-      .select()
-      .from(feedback)
-      .where(
-        and(
-          eq(feedback.intelligenceId, parseInt(id)),
-          eq(feedback.createdBy, req.user.id)
+      const [existingFeedback] = await db
+        .select()
+        .from(feedback)
+        .where(
+          and(
+            eq(feedback.intelligenceId, parseInt(id)),
+            eq(feedback.createdBy, req.user.id)
+          )
         )
-      )
-      .limit(1);
+        .limit(1);
 
-    if (existingFeedback) {
-      return res.status(400).send("You have already provided feedback for this report");
+      if (existingFeedback) {
+        return res.status(400).json({ error: "Feedback already provided" });
+      }
+
+      const [newFeedback] = await db
+        .insert(feedback)
+        .values({
+          intelligenceId: parseInt(id),
+          createdBy: req.user.id,
+          rating,
+          comment,
+        })
+        .returning();
+
+      res.json(newFeedback);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create feedback" });
     }
-
-    const [newFeedback] = await db
-      .insert(feedback)
-      .values({
-        intelligenceId: parseInt(id),
-        createdBy: req.user.id,
-        rating,
-        comment,
-      })
-      .returning();
-
-    res.json(newFeedback);
   });
 
   // Annotations routes
-  app.get("/api/intelligence/:id/annotations", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
+  app.get("/api/intelligence/:id/annotations", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = await db
+        .select()
+        .from(annotations)
+        .where(eq(annotations.intelligenceId, parseInt(id)))
+        .orderBy(annotations.createdAt);
+
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch annotations" });
     }
-
-    const { id } = req.params;
-    const data = await db
-      .select()
-      .from(annotations)
-      .where(eq(annotations.intelligenceId, parseInt(id)))
-      .orderBy(annotations.createdAt);
-
-    res.json(data);
   });
 
-  app.post("/api/intelligence/:id/annotations", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
+  app.post("/api/intelligence/:id/annotations", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { content, startOffset, endOffset, parentId } = req.body;
+
+      const [annotation] = await db
+        .insert(annotations)
+        .values({
+          content,
+          intelligenceId: parseInt(id),
+          createdBy: req.user.id,
+          startOffset,
+          endOffset,
+          parentId: parentId || null,
+        })
+        .returning();
+
+      res.json(annotation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create annotation" });
     }
-
-    const { id } = req.params;
-    const { content, startOffset, endOffset, parentId } = req.body;
-
-    const [annotation] = await db
-      .insert(annotations)
-      .values({
-        content,
-        intelligenceId: parseInt(id),
-        createdBy: req.user.id,
-        startOffset,
-        endOffset,
-        parentId: parentId || null,
-      })
-      .returning();
-
-    res.json(annotation);
   });
 
   // Alerts routes
-  app.get("/api/alerts", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
+  app.get("/api/alerts", requireAuth, async (req, res) => {
+    try {
+      const data = await db.select().from(alerts).orderBy(alerts.createdAt);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch alerts" });
     }
-    const data = await db.select().from(alerts).orderBy(alerts.createdAt);
-    res.json(data);
   });
 
-  app.post("/api/alerts", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
+  app.post("/api/alerts", requireAuth, async (req, res) => {
+    try {
+      const { title, description, priority } = req.body;
+      const [alert] = await db.insert(alerts)
+        .values({
+          title,
+          description,
+          priority,
+          createdBy: req.user.id
+        })
+        .returning();
+      res.json(alert);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create alert" });
     }
-    const { title, description, priority } = req.body;
-    const [alert] = await db.insert(alerts)
-      .values({
-        title,
-        description,
-        priority,
-        createdBy: req.user.id
-      })
-      .returning();
-    res.json(alert);
   });
 
   const httpServer = createServer(app);
-
-  // Setup WebSocket after creating HTTP server
   setupWebSocket(httpServer, app);
 
   return httpServer;
