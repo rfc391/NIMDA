@@ -42,6 +42,38 @@ export function registerRoutes(app: Express): Server {
     }
     const { title, content, classification, metadata } = req.body;
 
+
+  app.post("/api/intelligence/batch", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+    const { reports } = req.body;
+    
+    const processedReports = await Promise.all(
+      reports.map(async (report) => {
+        const aiProcessed = await processIntelligence({
+          id: 0,
+          ...report,
+          createdBy: req.user.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        
+        return {
+          ...report,
+          aiProcessed,
+          createdBy: req.user.id,
+        };
+      })
+    );
+
+    const inserted = await db.insert(intelligence)
+      .values(processedReports)
+      .returning();
+      
+    res.json(inserted);
+  });
+
     // Process with AI
     const aiProcessed = await processIntelligence({ 
       id: 0, // Temporary ID for processing

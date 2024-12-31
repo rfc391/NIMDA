@@ -11,7 +11,7 @@ export type ProcessedIntelligence = {
   recommendations: string[];
 };
 
-export async function processIntelligence(intel: Intelligence): Promise<ProcessedIntelligence> {
+export async function processIntelligence(intel: Intelligence): Promise<ProcessedIntelligence & { isCritical?: boolean }> {
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",

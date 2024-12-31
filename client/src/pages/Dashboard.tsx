@@ -30,8 +30,36 @@ export default function Dashboard() {
     value,
   }));
 
+  const sentimentData = intelligence?.reduce((acc: any, item) => {
+    const sentiment = item.aiProcessed?.sentiment || 'neutral';
+    acc[sentiment] = (acc[sentiment] || 0) + 1;
+    return acc;
+  }, {});
+
+  const sentimentChartData = Object.entries(sentimentData || {}).map(([name, value]) => ({
+    name,
+    value,
+  }));
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Sentiment Analysis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={sentimentChartData}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#82ca9d" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Intelligence Reports</CardTitle>
