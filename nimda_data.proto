@@ -1,0 +1,16 @@
+
+syntax = "proto3";
+
+package NIMDA;
+
+message SensorData {
+  string sensor_id = 1;
+  string timestamp = 2;
+  double value = 3;
+}
+
+message AnalysisResult {
+  string analysis_id = 1;
+  string status = 2;
+  string description = 3;
+}
