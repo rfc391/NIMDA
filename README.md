@@ -1,5 +1,23 @@
+# NIMDA
 
-# Data Directory
+## Overview
+Provide an overview of the project and its purpose.
 
-- `raw/`: Contains raw input data
-- `processed/`: Contains processed output data
+## Features
+- List
+- Of
+- Key
+- Features
+
+## Usage
+Instructions for usage.
+
+## Installation
+Steps for installation.
+
+## Protocol Buffers
+Details on Protobuf usage in the project.
+
+## Contributors
+- Name 1
+- Name 2
