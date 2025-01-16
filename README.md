@@ -1,7 +1,7 @@
 
 # NIMDA Project
 
-NIMDA is a military-grade, DARPA-compliant software framework designed for secure, efficient, and real-time operations. This project integrates cutting-edge technologies for AI, data transport, and secure storage.
+NIMDA (National Intelligence Network Data Analyzer) is a web-based platform designed for intelligence management. It supports law enforcement, private security, and intelligence agencies by optimizing resources and enabling controlled information dissemination. NIMDA uses a military-grade, DARPA-compliant software framework designed for secure, efficient, and real-time operations. This project integrates cutting-edge technologies for AI, data transport, and secure storage.
 
 ## Features
 - **EDA Framework**: Kafka, RabbitMQ for event-driven architecture.
