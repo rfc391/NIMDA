@@ -5,3 +5,8 @@ jupyter==1.0.0
 
 grpcio
 grpcio-tools
+
+opencv-python-headless==4.5.5.64
+onnxruntime==1.14.1
+nvidia-pyindex
+nvidia-tensorrt

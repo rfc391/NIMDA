@@ -1,0 +1,60 @@
+
+version: '3.9'
+services:
+  kafka:
+    image: 'confluentinc/cp-kafka:latest'
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '1'
+    ports:
+      - '9092:9092'
+
+  zookeeper:
+    image: 'confluentinc/cp-zookeeper:latest'
+    environment:
+      ZOOKEEPER_CLIENT_PORT: '2181'
+    ports:
+      - '2181:2181'
+
+  rabbitmq:
+    image: 'rabbitmq:3-management'
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+
+  influxdb:
+    image: 'influxdb:latest'
+    ports:
+      - '8086:8086'
+    environment:
+      INFLUXDB_ADMIN_USER: 'admin'
+      INFLUXDB_ADMIN_PASSWORD: 'password'
+      INFLUXDB_DB: 'metrics'
+
+  postgres:
+    image: 'postgres:latest'
+    environment:
+      POSTGRES_USER: 'user'
+      POSTGRES_PASSWORD: 'password'
+      POSTGRES_DB: 'main_db'
+    ports:
+      - '5432:5432'
+
+  immudb:
+    image: 'codenotary/immudb:latest'
+    ports:
+      - '3322:3322'
+      - '9497:9497'
+
+  ipfs:
+    image: 'ipfs/go-ipfs:latest'
+    ports:
+      - '4001:4001'
+      - '5001:5001'
+      - '8080:8080'
+
+networks:
+  default:
+    driver: bridge
