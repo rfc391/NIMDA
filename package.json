@@ -21,7 +21,7 @@
     "@types/passport-local": "^1.0.38",
     "@types/pg": "^8.11.10",
     "@vitejs/plugin-react": "^4.3.4",
-    "drizzle-kit": "^0.30.2",
+    "drizzle-kit": "^0.30.4",
     "drizzle-orm": "^0.38.3",
     "drizzle-zod": "^0.6.1",
     "express-session": "^1.18.1",
