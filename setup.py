@@ -11,6 +11,9 @@ setup(
     ],
     author="Your Name",
     description="A brief description of your project",
-    long_description=open("README.md").read(),
+    try:
+        long_description = open("README.md").read()
+    except FileNotFoundError:
+        long_description = ""
     long_description_content_type="text/markdown",
 )

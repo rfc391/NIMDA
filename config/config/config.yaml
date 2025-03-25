@@ -1,8 +1,0 @@
-
-app:
-  name: project_name
-  version: 0.0.1
-
-data:
-  input_path: data/raw
-  output_path: data/processed
