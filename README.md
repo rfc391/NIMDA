@@ -1,73 +1,103 @@
 
-# NIMDA Project
+# 🧠 NIMDA – Network Intelligence & Monitoring Dashboard with AI
 
-NIMDA (National Intelligence Network Data Analyzer) is a web-based platform designed for intelligence management. It supports law enforcement, private security, and intelligence agencies by optimizing resources and enabling controlled information dissemination. NIMDA uses a military-grade, DARPA-compliant software framework designed for secure, efficient, and real-time operations. This project integrates cutting-edge technologies for AI, data transport, and secure storage.
+**NIMDA** is a fully integrated, cross-platform, AI-powered cyber operations dashboard. Built with cutting-edge technologies including React, TypeScript, Python, and WebSocket integration, NIMDA offers real-time insights, anomaly detection, and automated intelligence analysis in a compact and deployable package.
 
-## Features
-- **EDA Framework**: Kafka, RabbitMQ for event-driven architecture.
-- **AI Engine**: OpenCV, ONNX, NVIDIA Triton for real-time AI processing.
-- **gRPC with Protobuf**: Low-latency communication between services.
-- **Databases**:
-  - Time-Series: InfluxDB for metrics and analytics.
-  - Transactional: PostgreSQL for structured data.
-  - Immutable Storage: immudb with IPFS for secure archival.
-- **Security**: Zero Trust architecture and Quantum-Safe Encryption.
-- **Performance Enhancements**: Cloudflare Workers and Redis caching.
-- **Storage**: Decentralized storage using IPFS Cluster.
+---
 
-## Installation and Setup
+## 🚀 Features
 
-### Prerequisites
-- Docker and Docker Compose installed on your system.
-- Python 3.8+ for backend scripts.
-- Node.js for frontend components.
+- 🎛️ Dynamic React Dashboard with Dark Mode
+- 🔐 Built-in Authentication & Role-Based Access
+- 🧠 AI Engine (Python) for automated recon and data analysis
+- 📡 Real-Time Alerts and Notifications
+- 📦 Offline-compatible via `.AppImage`, `.exe`, `.deb`
+- 🧪 Full test suite (Jest + Pytest)
+- 📊 Integrated logging, charts, and analytics
+- ☁️ Cloudflare cache purge automation
+- 🐳 Docker & CI/CD ready
 
-### Steps
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/rfc391/NIMDA.git
-   cd NIMDA
-   ```
+---
 
-2. Start the services using Docker Compose:
-   ```bash
-   docker-compose up -d
-   ```
+## 💻 Installation
 
-3. Install backend dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 🔗 From Source
 
-4. Run the backend AI engine:
-   ```bash
-   python ai_engine.py
-   ```
+```bash
+git clone https://github.com/rfc391/NIMDA.git
+cd NIMDA
+npm install
+npm run dev
+```
 
-## Usage
-- **AI Engine**:
-  - Place your ONNX model in the project directory.
-  - Use `AIEngine` class for predictions.
+### 📦 Install Packages
 
-  Example:
-  ```python
-  from ai_engine import AIEngine
+```bash
+pip install -r requirements.txt
+```
 
-  engine = AIEngine("model.onnx")
-  prediction = engine.predict("sample_image.jpg")
-  print(prediction)
-  ```
+### 🔌 Run Backend AI Engine
 
-- **Web Interface**: Access the frontend via `http://localhost:3000`.
+```bash
+python3 main.py
+```
 
-## Contributing
-We welcome contributions. Please follow the [contribution guidelines](./CONTRIBUTING.md).
+---
 
-## License
-This project is licensed under the [MIT License](./LICENSE).
+## 🖥️ Cross-Platform Executables
 
-## Security
-Please review the [SECURITY.md](./SECURITY.md) file for details on security policies.
+Prebuilt versions available under [Releases](https://github.com/rfc391/NIMDA/releases):
 
-## Contact
-For issues or feature requests, open an issue in the repository.
+| OS      | Format     |
+|---------|------------|
+| Linux   | `.AppImage`, `.deb` |
+| Windows | `.exe`     |
+| macOS   | (coming soon) |
+
+---
+
+## 🧪 Testing
+
+```bash
+# React tests
+npm run test
+
+# Python AI module
+pytest tests/
+```
+
+---
+
+## 🛠️ Developer Notes
+
+- Written in React + TypeScript (frontend)
+- Python + WebSockets for AI backend
+- TailwindCSS for UI styling
+- Docker-ready with `docker-compose.yml`
+- Uses Vite for blazing-fast development
+
+---
+
+## 🧰 File Structure
+
+```bash
+📁 src/                # React components
+📁 server/             # WebSocket server & backend
+📁 scripts/            # Automation & deployment tools
+📁 docs/               # Extended documentation
+main.py                # AI engine
+setup.py               # Python packaging
+Dockerfile             # For containerized deployment
+```
+
+---
+
+## 🧑‍💻 Contributors
+
+Maintained by [`rfc391`](https://github.com/rfc391) and the Apex Security Int Ltd team.
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License.

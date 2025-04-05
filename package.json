@@ -1,42 +1,65 @@
 {
-    "scripts": {
-        "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
-        "dev:client": "vite",
-        "dev:server": "tsx watch server/index.ts",
-        "build": "tsc && vite build",
-        "start": "node dist/server/index.js",
-        "lint": "eslint . --ext ts,tsx --fix",
-        "test": "vitest",
-        "typecheck": "tsc --noEmit",
-        "format": "prettier --write \"**/*.{ts,tsx,css,json,yml}\"",
-        "prestart": "npm run build"
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "vite",
+    "dev:server": "tsx watch server/index.ts",
+    "build": "tsc && vite build",
+    "start": "node dist/server/index.js",
+    "lint": "eslint . --ext ts,tsx --fix",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,tsx,css,json,yml}\"",
+    "prestart": "npm run build",
+    "electron:dev": "electron .",
+    "electron:build": "electron-builder"
+  },
+  "dependencies": {
+    "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
+    "@replit/vite-plugin-shadcn-theme-json": "^0.0.4",
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/express": "^5.0.0",
+    "@types/express-session": "^1.18.1",
+    "@types/jest": "^29.5.14",
+    "@types/passport": "^1.0.17",
+    "@types/passport-local": "^1.0.38",
+    "@types/pg": "^8.11.10",
+    "@vitejs/plugin-react": "^4.3.4",
+    "drizzle-kit": "^0.30.2",
+    "drizzle-orm": "^0.38.3",
+    "drizzle-zod": "^0.6.1",
+    "express-session": "^1.18.1",
+    "memorystore": "^1.6.7",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0",
+    "pg": "^8.13.1",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "vite": "^6.0.11",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5"
+  },
+  "main": "main.js",
+  "build": {
+    "appId": "com.apexsecurity.nimda",
+    "productName": "NIMDA",
+    "files": [
+      "dist/**/*",
+      "main.js"
+    ],
+    "directories": {
+      "output": "dist"
     },
-    "dependencies": {
-        "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
-        "@replit/vite-plugin-shadcn-theme-json": "^0.0.4",
-        "@tailwindcss/typography": "^0.5.16",
-        "@types/express": "^5.0.0",
-        "@types/express-session": "^1.18.1",
-        "@types/jest": "^29.5.14",
-        "@types/passport": "^1.0.17",
-        "@types/passport-local": "^1.0.38",
-        "@types/pg": "^8.11.10",
-        "@vitejs/plugin-react": "^4.3.4",
-        "drizzle-kit": "^0.30.2",
-        "drizzle-orm": "^0.38.3",
-        "drizzle-zod": "^0.6.1",
-        "express-session": "^1.18.1",
-        "memorystore": "^1.6.7",
-        "passport": "^0.7.0",
-        "passport-local": "^1.0.0",
-        "pg": "^8.13.1",
-        "tailwindcss": "^3.4.17",
-        "tailwindcss-animate": "^1.0.7",
-        "vite": "^6.0.11",
-        "winston": "^3.17.0"
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ]
     },
-    "devDependencies": {
-        "jest": "^29.7.0",
-        "ts-jest": "^29.2.5"
+    "win": {
+      "target": "nsis"
     }
+  }
 }
