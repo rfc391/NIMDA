@@ -1,2 +1,0 @@
-# Example dependency list
-pytest==7.4.0

@@ -1,3 +1,0 @@
-jobs:
-  deploy:
-    uses: ParaCryptid/.github/.github/workflows/military_ci_cd_pipeline.yml@main
