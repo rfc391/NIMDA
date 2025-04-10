@@ -1,0 +1,9 @@
+
+# CI/CD Pipeline Configuration
+steps:
+  - name: Install Dependencies
+    script: pip install -r requirements.txt
+  - name: Run Tests
+    script: pytest
+  - name: Deploy
+    script: python deploy_script.py
